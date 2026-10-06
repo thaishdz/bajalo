@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bajalo"
+version = "0.1.0"
+description = "A simple CLI wrapper around yt-dlp to download videos from the terminal"
+requires-python = ">=3.10"
+dependencies = ["yt-dlp"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+bajalo = "bajalo.cli:main"
