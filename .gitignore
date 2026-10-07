@@ -1,3 +1,9 @@
 .venv/
 __pycache__/
 dist/
+
+*.webm
+*.mp4
+*.mkv
+*.mp3
+*.part
