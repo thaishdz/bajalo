@@ -101,7 +101,7 @@ def test_audio_uses_ydl_as_context_manager(ydl_cls):
 @pytest.mark.parametrize("call", [
     lambda: download_video(URL, FOLDER, SELECTOR, None),
     lambda: download_audio(URL, FOLDER, "mp3"),
-])
+], ids=["video", "audio"])
 def test_download_errors_reach_the_caller(ydl_cls, call):
     """cli.main() catches DownloadError, so the downloader must not swallow it."""
     instance = ydl_cls.return_value.__enter__.return_value
