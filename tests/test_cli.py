@@ -1,9 +1,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from bajalo.options import FORMATS
+
 import pytest
 
 from bajalo.cli import get_audio_format, main
+from bajalo.options import FORMATS
 
 URL = "https://www.youtube.com/watch?v=YE7VzlLtp-4"
 
@@ -39,13 +40,30 @@ def test_main_only_audio_auto_downloads_best_audio():
     with (
         patch("bajalo.cli.questionary.select", side_effect=selects),
         patch("bajalo.cli.questionary.text", side_effect=answers(URL)),
-        patch("bajalo.cli.download_audio") as download_audio,
+        patch(
+            "bajalo.cli.download_audio",
+        ) as download_audio,
         patch("bajalo.cli.download_video") as download_video,
     ):
         main()
 
     download_audio.assert_called_once_with(URL, str(Path.home() / "Downloads"), "best")
     download_video.assert_not_called()
+
+
+def test_main_ctrl_c_during_download_exits_cleanly(capsys):
+    selects = answers("video", "Desktop", "720p", "mkv")
+    with (
+        patch("bajalo.cli.questionary.select", side_effect=selects),
+        patch("bajalo.cli.questionary.text", side_effect=answers(URL)),
+        patch("bajalo.cli.download_video", side_effect=KeyboardInterrupt),
+        patch("bajalo.cli.download_audio"),
+        pytest.raises(SystemExit) as exc,
+    ):
+        main()
+
+    assert exc.value.code == 130
+    assert str(Path.home() / "Desktop") in capsys.readouterr().out
 
 
 def test_main_video_desktop_1080p_mp4():

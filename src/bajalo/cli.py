@@ -10,14 +10,23 @@ from bajalo.utils import is_valid_url
 
 
 def main():
+    media_type = get_media_type()
+    url = get_url()
+    folder = get_folder()
     try:
-        if get_kind() == "video":
-            download_video(get_url(), get_folder(), get_quality(), get_extension())
+        if media_type == "video":
+            download_video(url, folder, get_quality(), get_extension())
         else:
-            download_audio(get_url(), get_folder(), get_audio_format())
+            download_audio(url, folder, get_audio_format())
     except DownloadError:
         print("Download failed. Check the link and try again.")
         sys.exit(1)
+    except KeyboardInterrupt:
+        print(
+            f"\nDownload cancelled. Partial files may remain in {folder}.\n"
+            "Run 'bajalo' again with the same URL to resume."
+        )
+        sys.exit(130)
 
 
 def get_url():
@@ -30,7 +39,7 @@ def validate_url(text):
     return is_valid_url(text) or "Enter a full URL starting with http:// or https://"
 
 
-def get_kind():
+def get_media_type():
     return questionary.select(
         "Select:", choices=["video", "only audio"]
     ).ask() or sys.exit(1)
