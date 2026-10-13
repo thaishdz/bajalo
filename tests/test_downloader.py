@@ -1,6 +1,8 @@
 from unittest.mock import patch
+
 import pytest
 from yt_dlp.utils import DownloadError
+
 from bajalo.downloader import download_audio, download_video
 
 URL = "https://www.youtube.com/watch?v=YE7VzlLtp-4"
@@ -27,6 +29,7 @@ def download_called_with(cls):
 
 
 # --- download_video ---------------------------------------------------------
+
 
 def test_video_passes_url_as_a_list(ydl_cls):
     download_video(URL, FOLDER, SELECTOR, None)
@@ -70,6 +73,7 @@ def test_video_uses_ydl_as_context_manager(ydl_cls):
 
 # --- download_audio ---------------------------------------------------------
 
+
 def test_audio_passes_url_as_a_list(ydl_cls):
     download_audio(URL, FOLDER, "mp3")
     assert download_called_with(ydl_cls) == ([URL],)
@@ -98,10 +102,15 @@ def test_audio_uses_ydl_as_context_manager(ydl_cls):
 
 # --- errors -----------------------------------------------------------------
 
-@pytest.mark.parametrize("call", [
-    lambda: download_video(URL, FOLDER, SELECTOR, None),
-    lambda: download_audio(URL, FOLDER, "mp3"),
-], ids=["video", "audio"])
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: download_video(URL, FOLDER, SELECTOR, None),
+        lambda: download_audio(URL, FOLDER, "mp3"),
+    ],
+    ids=["video", "audio"],
+)
 def test_download_errors_reach_the_caller(ydl_cls, call):
     """cli.main() catches DownloadError, so the downloader must not swallow it."""
     instance = ydl_cls.return_value.__enter__.return_value
