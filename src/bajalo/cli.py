@@ -5,19 +5,8 @@ import questionary
 from yt_dlp.utils import DownloadError
 
 from bajalo.downloader import download_audio, download_video
+from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
 from bajalo.utils import is_valid_url
-
-FORMATS = {
-    "1080p": "bv*[height<=1080]+ba/b[height<=1080]",
-    "720p": "bv*[height<=720]+ba/b[height<=720]",
-}
-
-EXTENSIONS = {
-    "auto (let yt-dlp decide)": None,
-    "mp4": "mp4",
-    "mkv": "mkv",
-    "webm": "webm",
-}
 
 
 def main():
@@ -50,7 +39,7 @@ def get_kind():
 def get_folder():
     choice = questionary.select(
         "Save to:",
-        choices=["Desktop", "Downloads"],
+        choices=FOLDERS,
     ).ask() or sys.exit(1)
     return str(Path.home() / choice)
 
@@ -70,12 +59,8 @@ def get_extension():
 
 
 def get_audio_format():
-    return questionary.select(
+    choice = questionary.select(
         "Select audio format:",
-        choices=[
-            questionary.Choice("auto (keep original quality)", value="best"),
-            "mp3",
-            "m4a",
-            "opus",
-        ],
+        choices=list(AUDIO_FORMATS),
     ).ask() or sys.exit(1)
+    return AUDIO_FORMATS[choice]
