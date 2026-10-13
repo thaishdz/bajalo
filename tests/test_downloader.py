@@ -86,6 +86,20 @@ def test_video_without_hook_adds_no_progress_hooks(ydl_cls):
     assert "progress_hooks" not in options
 
 
+def test_video_quiet_silences_ydl_output(ydl_cls):
+    download_video(URL, FOLDER, SELECTOR, None, quiet=True)
+    options = options_used(ydl_cls)
+    assert options["quiet"] is True
+    assert options["noprogress"] is True
+
+
+def test_video_not_quiet_by_default(ydl_cls):
+    download_video(URL, FOLDER, SELECTOR, None)
+    options = options_used(ydl_cls)
+    assert "quiet" not in options
+    assert "noprogress" not in options
+
+
 # --- download_audio ---------------------------------------------------------
 
 
@@ -128,6 +142,20 @@ def test_audio_without_hook_adds_no_progress_hooks(ydl_cls):
     download_audio(URL, FOLDER, "mp3")
     options = options_used(ydl_cls)
     assert "progress_hooks" not in options
+
+
+def test_audio_quiet_silences_ydl_output(ydl_cls):
+    download_audio(URL, FOLDER, "mp3", quiet=True)
+    options = options_used(ydl_cls)
+    assert options["quiet"] is True
+    assert options["noprogress"] is True
+
+
+def test_audio_not_quiet_by_default(ydl_cls):
+    download_audio(URL, FOLDER, "mp3")
+    options = options_used(ydl_cls)
+    assert "quiet" not in options
+    assert "noprogress" not in options
 
 
 # --- errors -----------------------------------------------------------------
