@@ -71,6 +71,21 @@ def test_video_uses_ydl_as_context_manager(ydl_cls):
     ydl_cls.return_value.__exit__.assert_called_once()
 
 
+def test_video_passes_progress_hook_to_ydl(ydl_cls):
+    def dummy_hook(d):
+        pass
+
+    download_video(URL, FOLDER, SELECTOR, None, progress_hook=dummy_hook)
+    options = options_used(ydl_cls)
+    assert options["progress_hooks"] == [dummy_hook]
+
+
+def test_video_without_hook_adds_no_progress_hooks(ydl_cls):
+    download_video(URL, FOLDER, SELECTOR, None)
+    options = options_used(ydl_cls)
+    assert "progress_hooks" not in options
+
+
 # --- download_audio ---------------------------------------------------------
 
 
@@ -98,6 +113,21 @@ def test_audio_uses_ydl_as_context_manager(ydl_cls):
     download_audio(URL, FOLDER, "mp3")
     ydl_cls.return_value.__enter__.assert_called_once()
     ydl_cls.return_value.__exit__.assert_called_once()
+
+
+def test_audio_passes_progress_hook_to_ydl(ydl_cls):
+    def dummy_hook(d):
+        pass
+
+    download_audio(URL, FOLDER, "mp3", progress_hook=dummy_hook)
+    options = options_used(ydl_cls)
+    assert options["progress_hooks"] == [dummy_hook]
+
+
+def test_audio_without_hook_adds_no_progress_hooks(ydl_cls):
+    download_audio(URL, FOLDER, "mp3")
+    options = options_used(ydl_cls)
+    assert "progress_hooks" not in options
 
 
 # --- errors -----------------------------------------------------------------

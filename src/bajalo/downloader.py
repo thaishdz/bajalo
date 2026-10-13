@@ -1,7 +1,7 @@
 from yt_dlp import YoutubeDL
 
 
-def download_video(url, folder, video_format, extension):
+def download_video(url, folder, video_format, extension, progress_hook=None):
     options = {
         "paths": {"home": folder},
         "format": video_format,
@@ -11,10 +11,10 @@ def download_video(url, folder, video_format, extension):
     if extension == "mp4":  # prefer H.264/AAC so the mp4 plays everywhere
         options["format_sort"] = ["vcodec:h264", "acodec:aac"]
 
-    _download(url, options)
+    _download(url, options, progress_hook)
 
 
-def download_audio(url, folder, audio_format):
+def download_audio(url, folder, audio_format, progress_hook=None):
     options = {
         "paths": {"home": folder},
         "format": "bestaudio/best",  # fetch only the audio track, not the full video
@@ -26,9 +26,11 @@ def download_audio(url, folder, audio_format):
         ],
     }
 
-    _download(url, options)
+    _download(url, options, progress_hook)
 
 
-def _download(url, options):
+def _download(url, options, progress_hook=None):
+    if progress_hook:
+        options["progress_hooks"] = [progress_hook]
     with YoutubeDL(options) as ydl:
         ydl.download([url])
