@@ -1,17 +1,17 @@
 from yt_dlp import YoutubeDL
 
 
-def download_video(
-    url, folder, video_format, extension, progress_hook=None, quiet=False
-):
+def download_video(url, folder, quality, extension, progress_hook=None, quiet=False):
     options = {
         "paths": {"home": folder},
-        "format": video_format,
+        "format": "bv*+ba/b",  # best video + best audio, or the best single file
+        "format_sort": [quality],  # e.g. "res:1080": largest up to 1080p
     }
     if extension:
         options["merge_output_format"] = extension
-    if extension == "mp4":  # prefer H.264/AAC so the mp4 plays everywhere
-        options["format_sort"] = ["vcodec:h264", "acodec:aac"]
+    if extension == "mp4":  # prefer H.264/AAC so the mp4 plays everywhere,
+        # even if that means a lower resolution than the one asked for
+        options["format_sort"] = ["vcodec:h264", "acodec:aac", quality]
 
     _download(url, options, progress_hook, quiet)
 

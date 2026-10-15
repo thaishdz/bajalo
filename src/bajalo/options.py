@@ -1,6 +1,7 @@
+# yt-dlp sort keys: "res" is the short side, so vertical videos match too
 FORMATS = {
-    "1080p": "bv*[height<=1080]+ba/b[height<=1080]",
-    "720p": "bv*[height<=720]+ba/b[height<=720]",
+    "1080p": "res:1080",
+    "720p": "res:720",
 }
 
 EXTENSIONS = {
