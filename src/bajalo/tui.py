@@ -4,7 +4,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.validation import Function
-from textual.widgets import Button, Footer, Header, Input, Label, Select
+from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, Select
 
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
@@ -90,6 +90,9 @@ class BajaloApp(App):
                     ),
                 )
             yield Button("Download", id="download", variant="primary")
+            with Vertical(classes="group") as group:
+                group.border_title = "Downloading..."
+                yield ProgressBar(id="progress")
         yield Footer()
 
     @on(Input.Changed, "#url")
@@ -122,12 +125,23 @@ class BajaloApp(App):
 
     @work(thread=True)
     def run_download(self, download, *args):
-        download(*args, quiet=True)
+        download(*args, progress_hook=self.update_progress, quiet=True)
         self.call_from_thread(self.notify, "Download finished!")
         self.call_from_thread(self.enable_download_button)
 
     def enable_download_button(self):
         self.query_one("#download", Button).disabled = False
+
+    def update_progress(self, progress):
+        total_bytes = progress.get("total_bytes") or progress.get(
+            "total_bytes_estimate"
+        )
+        downloaded_bytes = progress.get("downloaded_bytes") or 0
+        self.call_from_thread(
+            self.query_one("#progress", ProgressBar).update,
+            total=total_bytes,
+            progress=downloaded_bytes,
+        )
 
 
 def main():

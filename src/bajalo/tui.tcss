@@ -41,4 +41,17 @@ Screen {
 
 #download {
     width: 100%;
+    margin-bottom: 1;
+}
+
+#progress {
+    width: 100%;
+}
+
+#progress Bar {
+    width: 1fr;
+}
+
+#progress Bar > .bar--indeterminate {
+    color: $primary;
 }
