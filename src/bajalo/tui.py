@@ -2,57 +2,94 @@ from pathlib import Path
 
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.validation import Function
 from textual.widgets import Button, Footer, Header, Input, Label, Select
 
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
+from bajalo.theme import TERMINAL_THEME
 from bajalo.utils import is_valid_url
+
+
+def field(label, widget):
+    """A widget with a small caption above it."""
+    return Vertical(Label(label), widget, classes="field")
 
 
 class BajaloApp(App):
     TITLE = "bajalo"
+    CSS_PATH = "tui.tcss"
+
+    def on_mount(self):
+        self.register_theme(TERMINAL_THEME)
+        self.theme = "terminal"
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Input(
-            placeholder="Paste the video URL",
-            id="url",
-            validators=[
-                Function(
-                    is_valid_url, "Enter a full URL starting with http:// or https://"
-                ),
-            ],
-        )
-        yield Label("", id="url_error")
-        yield Select(
-            [("video", "video"), ("only audio", "audio")],
-            id="media_type",
-            allow_blank=False,
-            value="video",
-        )
-        yield Select.from_values(
-            FOLDERS, id="folder", allow_blank=False, value="Desktop"
-        )
-        with Vertical(id="video_options"):
-            yield Select(
-                FORMATS.items(), id="quality", allow_blank=False, value=FORMATS["1080p"]
-            )
-            yield Select(
-                EXTENSIONS.items(),
-                id="extension",
-                allow_blank=False,
-                value=EXTENSIONS["mp4"],
-            )
-        with Vertical(id="audio_options"):
-            yield Select(
-                AUDIO_FORMATS.items(),
-                id="audio_format",
-                allow_blank=False,
-                value=AUDIO_FORMATS["mp3"],
-            )
-        yield Button("Download", id="download", variant="primary")
+        with VerticalScroll(id="form"):
+            with Vertical(classes="group") as group:
+                group.border_title = "Video URL"
+                yield Input(
+                    placeholder="Paste the video URL",
+                    id="url",
+                    validators=[
+                        Function(
+                            is_valid_url,
+                            "Enter a full URL starting with http:// or https://",
+                        ),
+                    ],
+                )
+                yield Label("", id="url_error")
+            with Horizontal(classes="group row") as group:
+                group.border_title = "Output"
+                yield field(
+                    "Type",
+                    Select(
+                        [("video", "video"), ("only audio", "audio")],
+                        id="media_type",
+                        allow_blank=False,
+                        value="video",
+                    ),
+                )
+                yield field(
+                    "Save to",
+                    Select.from_values(
+                        FOLDERS, id="folder", allow_blank=False, value="Desktop"
+                    ),
+                )
+            with Horizontal(id="video_options", classes="group row") as group:
+                group.border_title = "Video options"
+                yield field(
+                    "Quality",
+                    Select(
+                        FORMATS.items(),
+                        id="quality",
+                        allow_blank=False,
+                        value=FORMATS["1080p"],
+                    ),
+                )
+                yield field(
+                    "Format",
+                    Select(
+                        EXTENSIONS.items(),
+                        id="extension",
+                        allow_blank=False,
+                        value=EXTENSIONS["mp4"],
+                    ),
+                )
+            with Vertical(id="audio_options", classes="group") as group:
+                group.border_title = "Audio options"
+                yield field(
+                    "Format",
+                    Select(
+                        AUDIO_FORMATS.items(),
+                        id="audio_format",
+                        allow_blank=False,
+                        value=AUDIO_FORMATS["mp3"],
+                    ),
+                )
+            yield Button("Download", id="download", variant="primary")
         yield Footer()
 
     @on(Input.Changed, "#url")

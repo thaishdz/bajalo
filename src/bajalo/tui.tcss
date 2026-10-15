@@ -1,0 +1,44 @@
+Screen {
+    align: center top;
+}
+
+#form {
+    width: 100%;
+    max-width: 90;
+    padding: 1 2;
+}
+
+.group {
+    height: auto;
+    border: round $primary 70%;
+    border-title-color: $accent;
+    border-title-style: bold;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.row {
+    height: auto;
+}
+
+.field {
+    width: 1fr;
+    height: auto;
+}
+
+.row .field {
+    margin-right: 1;
+}
+
+.field Label {
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#url_error {
+    color: $error;
+}
+
+#download {
+    width: 100%;
+}
