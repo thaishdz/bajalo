@@ -92,7 +92,7 @@ class BajaloApp(App):
             yield Button("Download", id="download", variant="primary")
             with Vertical(id="progress_box", classes="group") as group:
                 group.border_title = "Downloading..."
-                yield ProgressBar(id="progress")
+                yield ProgressBar(id="progress", show_eta=False)
         yield Footer()
 
     @on(Input.Changed, "#url")
@@ -114,6 +114,7 @@ class BajaloApp(App):
             return
         self.query_one("#download", Button).disabled = True
         self.query_one("#progress_box").display = True
+        self.query_one("#progress_box").border_title = "Downloading..."
         self.query_one("#progress", ProgressBar).update(total=None, progress=0)
         media_type = self.query_one("#media_type", Select).value
         folder = str(Path.home() / self.query_one("#folder", Select).value)
@@ -130,20 +131,30 @@ class BajaloApp(App):
         download(*args, progress_hook=self.update_progress, quiet=True)
         self.call_from_thread(self.notify, "Download finished!")
         self.call_from_thread(self.enable_download_button)
+        self.call_from_thread(self.set_progress_title, "Done")
 
     def enable_download_button(self):
         self.query_one("#download", Button).disabled = False
 
-    def update_progress(self, progress):
+    def update_progress(self, progress):  # yt-dlp calls this on every progress update
         total_bytes = progress.get("total_bytes") or progress.get(
             "total_bytes_estimate"
         )
         downloaded_bytes = progress.get("downloaded_bytes") or 0
+        # "finished" only means this file is downloaded: a video fetches two files
+        # and ffmpeg still has to merge them, so the real end is in run_download.
+        if progress.get("status") == "finished":
+            self.call_from_thread(self.set_progress_title, "Processing...")
+        else:
+            self.call_from_thread(self.set_progress_title, "Downloading...")
         self.call_from_thread(
             self.query_one("#progress", ProgressBar).update,
             total=total_bytes,
             progress=downloaded_bytes,
         )
+
+    def set_progress_title(self, title):
+        self.query_one("#progress_box").border_title = title
 
 
 def main():
