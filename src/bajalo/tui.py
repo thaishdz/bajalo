@@ -72,6 +72,7 @@ class BajaloApp(App):
         if not is_valid_url(url):
             self.notify("Enter a valid URL", severity="error")
             return
+        self.query_one("#download", Button).disabled = True
         media_type = self.query_one("#media_type", Select).value
         folder = str(Path.home() / self.query_one("#folder", Select).value)
         if media_type == "video":
@@ -85,8 +86,12 @@ class BajaloApp(App):
     @work(thread=True)
     def run_download(self, download, *args):
         download(*args, quiet=True)
+        self.call_from_thread(self.notify, "Download finished!")
+        self.call_from_thread(self.enable_download_button)
 
-    def media_type(self, media_type):
-        
+    def enable_download_button(self):
+        self.query_one("#download", Button).disabled = False
+
+
 def main():
     BajaloApp().run()
