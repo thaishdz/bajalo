@@ -52,6 +52,10 @@ Screen {
     width: 1fr;
 }
 
+#progress_box {
+    display: none;
+}
+
 #progress Bar > .bar--indeterminate {
     color: $primary;
 }

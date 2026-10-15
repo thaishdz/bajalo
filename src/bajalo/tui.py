@@ -90,7 +90,7 @@ class BajaloApp(App):
                     ),
                 )
             yield Button("Download", id="download", variant="primary")
-            with Vertical(classes="group") as group:
+            with Vertical(id="progress_box", classes="group") as group:
                 group.border_title = "Downloading..."
                 yield ProgressBar(id="progress")
         yield Footer()
@@ -113,6 +113,8 @@ class BajaloApp(App):
             self.notify("Enter a valid URL", severity="error")
             return
         self.query_one("#download", Button).disabled = True
+        self.query_one("#progress_box").display = True
+        self.query_one("#progress", ProgressBar).update(total=None, progress=0)
         media_type = self.query_one("#media_type", Select).value
         folder = str(Path.home() / self.query_one("#folder", Select).value)
         if media_type == "video":
