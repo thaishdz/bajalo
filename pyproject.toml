@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "bajalo"
 version = "0.1.0"
-description = "A simple CLI wrapper around yt-dlp to download videos from the terminal"
+description = "Download videos and audio from the terminal with a CLI or a TUI, powered by yt-dlp"
 requires-python = ">=3.10"
 dependencies = ["yt-dlp", "questionary", "textual"]
 
