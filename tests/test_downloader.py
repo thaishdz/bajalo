@@ -22,18 +22,30 @@ def options_used(cls):
     return cls.call_args.args[0]
 
 
-def download_called_with(cls):
-    """The arguments the code passed to ydl.download(...), inside the `with`."""
-    instance = cls.return_value.__enter__.return_value
-    return instance.download.call_args.args
+def ydl_instance(cls):
+    """The fake `ydl` object the code gets inside `with YoutubeDL(...) as ydl`."""
+    return cls.return_value.__enter__.return_value
+
+
+def finished_download(cls, filepath):
+    """Make extract_info report that yt-dlp saved the file at `filepath`."""
+    ydl_instance(cls).extract_info.return_value = {
+        "requested_downloads": [{"filepath": filepath}]
+    }
 
 
 # --- download_video ---------------------------------------------------------
 
 
-def test_video_passes_url_as_a_list(ydl_cls):
+def test_video_downloads_the_url(ydl_cls):
     download_video(URL, FOLDER, QUALITY, None)
-    assert download_called_with(ydl_cls) == ([URL],)
+    ydl_instance(ydl_cls).extract_info.assert_called_once_with(URL, download=True)
+
+
+def test_video_returns_the_final_file_path(ydl_cls):
+    finished_download(ydl_cls, "/home/user/Downloads/clip [abc].mp4")
+    path = download_video(URL, FOLDER, QUALITY, "mp4")
+    assert path == "/home/user/Downloads/clip [abc].mp4"
 
 
 def test_video_sets_folder_format_and_quality(ydl_cls):
@@ -104,9 +116,16 @@ def test_video_not_quiet_by_default(ydl_cls):
 # --- download_audio ---------------------------------------------------------
 
 
-def test_audio_passes_url_as_a_list(ydl_cls):
+def test_audio_downloads_the_url(ydl_cls):
     download_audio(URL, FOLDER, "mp3")
-    assert download_called_with(ydl_cls) == ([URL],)
+    ydl_instance(ydl_cls).extract_info.assert_called_once_with(URL, download=True)
+
+
+def test_audio_returns_the_converted_file_path(ydl_cls):
+    # yt-dlp reports the path after FFmpegExtractAudio, e.g. .mp3 rather than .m4a
+    finished_download(ydl_cls, "/home/user/Downloads/song.mp3")
+    path = download_audio(URL, FOLDER, "mp3")
+    assert path == "/home/user/Downloads/song.mp3"
 
 
 def test_audio_sets_folder_and_best_audio_format(ydl_cls):
@@ -172,7 +191,6 @@ def test_audio_not_quiet_by_default(ydl_cls):
 )
 def test_download_errors_reach_the_caller(ydl_cls, call):
     """cli.main() catches DownloadError, so the downloader must not swallow it."""
-    instance = ydl_cls.return_value.__enter__.return_value
-    instance.download.side_effect = DownloadError("boom")
+    ydl_instance(ydl_cls).extract_info.side_effect = DownloadError("boom")
     with pytest.raises(DownloadError):
         call()

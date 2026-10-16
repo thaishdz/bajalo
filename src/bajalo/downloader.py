@@ -13,7 +13,7 @@ def download_video(url, folder, quality, extension, progress_hook=None, quiet=Fa
         # even if that means a lower resolution than the one asked for
         options["format_sort"] = ["vcodec:h264", "acodec:aac", quality]
 
-    _download(url, options, progress_hook, quiet)
+    return _download(url, options, progress_hook, quiet)
 
 
 def download_audio(url, folder, audio_format, progress_hook=None, quiet=False):
@@ -28,7 +28,7 @@ def download_audio(url, folder, audio_format, progress_hook=None, quiet=False):
         ],
     }
 
-    _download(url, options, progress_hook, quiet)
+    return _download(url, options, progress_hook, quiet)
 
 
 def _download(url, options, progress_hook=None, quiet=False):
@@ -38,4 +38,5 @@ def _download(url, options, progress_hook=None, quiet=False):
         options["quiet"] = True
         options["noprogress"] = True
     with YoutubeDL(options) as ydl:
-        ydl.download([url])
+        info = ydl.extract_info(url, download=True)
+        return info["requested_downloads"][0]["filepath"]

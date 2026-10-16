@@ -1,6 +1,7 @@
+import subprocess
 from pathlib import Path
 
-from textual import on, work
+from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.validation import Function
@@ -95,6 +96,7 @@ class BajaloApp(App):
                 group.border_title = "Downloading..."
                 yield ProgressBar(id="progress", show_eta=False)
                 yield Label("", id="download_error", markup=False)
+                yield Label("", id="download_path", markup=False)
         yield Footer()
 
     @on(Input.Changed, "#url")
@@ -114,13 +116,15 @@ class BajaloApp(App):
         if not is_valid_url(url):
             self.notify("Enter a valid URL", severity="error")
             return
+
+        folder = str(Path.home() / self.query_one("#folder", Select).value)
         self.query_one("#download", Button).disabled = True
         self.query_one("#progress_box").display = True
         self.query_one("#progress_box").border_title = "Downloading..."
-        self.query_one("#progress_box").remove_class("failed")
+        self.query_one("#progress_box").remove_class("failed", "done")
         self.query_one("#progress", ProgressBar).update(total=None, progress=0)
+
         media_type = self.query_one("#media_type", Select).value
-        folder = str(Path.home() / self.query_one("#folder", Select).value)
         if media_type == "video":
             quality = self.query_one("#quality", Select).value
             extension = self.query_one("#extension", Select).value
@@ -132,9 +136,9 @@ class BajaloApp(App):
     @work(thread=True)
     def run_download(self, download, *args):
         try:
-            download(*args, progress_hook=self.update_progress, quiet=True)
-            self.call_from_thread(self.notify, "Download finished!")
+            path = download(*args, progress_hook=self.update_progress, quiet=True)
             self.call_from_thread(self.set_progress_title, "Done")
+            self.call_from_thread(self.show_download_path, path)
         except DownloadError as error:
             self.call_from_thread(
                 self.show_download_error, remove_terminal_sequences(error.msg)
@@ -169,6 +173,16 @@ class BajaloApp(App):
         self.query_one("#download_error", Label).update(message)
         self.query_one("#progress_box").add_class("failed")
         self.set_progress_title("Failed")
+
+    def show_download_path(self, path):
+        self.download_path = path
+        self.query_one("#download_path", Label).update(path)
+        self.query_one("#progress_box").add_class("done")
+
+    @on(events.Click, "#download_path")
+    def reveal_download(self):
+        # macOS: open Finder with the downloaded file selected
+        subprocess.run(["open", "-R", self.download_path], check=False)
 
 
 def main():

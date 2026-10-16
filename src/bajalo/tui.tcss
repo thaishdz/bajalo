@@ -79,3 +79,19 @@ Screen {
 #progress_box.failed #download_error {
     display: block;
 }
+
+/* When a download finishes: show where the file was saved */
+#download_path {
+    display: none;
+    width: 100%;
+    color: $text-muted;
+}
+
+#progress_box.done #download_path {
+    display: block;
+}
+
+#download_path:hover {
+    color: $accent;
+    text-style: underline;
+}
