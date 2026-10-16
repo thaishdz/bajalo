@@ -46,10 +46,9 @@ bj
 
 It asks for the same things step by step. Press `Ctrl+C` to cancel; run it again with the same URL to resume.
 
+### Quality and formats
 
-Notes:
-
-- **Quality** picks the best version up to that resolution, measured on the short side, so vertical videos (reels, Shorts) work too.
+- **Quality** (1080p or 720p) picks the best version up to that resolution, measured on the short side, so vertical videos (reels, Shorts) work too.
 - **mp4** prefers H.264/AAC so the file plays everywhere, even if that means a lower resolution than the one asked for. Choose **auto** for the highest quality.
 
 ## Development
