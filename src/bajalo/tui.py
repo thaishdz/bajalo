@@ -1,5 +1,6 @@
 import subprocess
 from pathlib import Path
+from typing import ClassVar
 
 from textual import events, on, work
 from textual.app import App, ComposeResult
@@ -22,6 +23,7 @@ def field(label, widget):
 class BajaloApp(App):
     TITLE = "bajalo"
     CSS_PATH = "tui.tcss"
+    BINDINGS: ClassVar = [("escape", "quit", "Quit")]
     download_path = None
 
     def on_mount(self):

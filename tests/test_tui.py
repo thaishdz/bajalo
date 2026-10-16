@@ -239,3 +239,28 @@ def test_clicking_the_saved_path_reveals_it_in_finder(downloads):
         run.assert_called_once_with(["open", "-R", SAVED_TO], check=False)
 
     drive(scenario)
+
+
+# --- keys -------------------------------------------------------------------
+
+
+def test_escape_quits_even_while_typing_the_url():
+    async def scenario(app, pilot):
+        app.query_one("#url").focus()
+        await pilot.press("h", "o", "l", "a", "escape")
+        await pilot.pause()
+        assert not app.is_running
+
+    drive(scenario)
+
+
+def test_escape_first_closes_an_open_dropdown():
+    async def scenario(app, pilot):
+        app.query_one("#quality").focus()
+        await pilot.press("enter")  # open the dropdown
+        await pilot.pause()
+        await pilot.press("escape")
+        await pilot.pause()
+        assert app.is_running
+
+    drive(scenario)
