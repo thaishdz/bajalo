@@ -22,6 +22,7 @@ def field(label, widget):
 class BajaloApp(App):
     TITLE = "bajalo"
     CSS_PATH = "tui.tcss"
+    download_path = None
 
     def on_mount(self):
         self.register_theme(TERMINAL_THEME)
