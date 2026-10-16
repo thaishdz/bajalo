@@ -5,30 +5,28 @@ import questionary
 from yt_dlp.utils import DownloadError
 
 from bajalo.downloader import download_audio, download_video
+from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
 from bajalo.utils import is_valid_url
-
-FORMATS = {
-    "1080p": "bv*[height<=1080]+ba/b[height<=1080]",
-    "720p": "bv*[height<=720]+ba/b[height<=720]",
-}
-
-EXTENSIONS = {
-    "auto (let yt-dlp decide)": None,
-    "mp4": "mp4",
-    "mkv": "mkv",
-    "webm": "webm",
-}
 
 
 def main():
+    media_type = get_media_type()
+    url = get_url()
+    folder = get_folder()
     try:
-        if get_kind() == "video":
-            download_video(get_url(), get_folder(), get_quality(), get_extension())
+        if media_type == "video":
+            download_video(url, folder, get_quality(), get_extension())
         else:
-            download_audio(get_url(), get_folder(), get_audio_format())
+            download_audio(url, folder, get_audio_format())
     except DownloadError:
         print("Download failed. Check the link and try again.")
         sys.exit(1)
+    except KeyboardInterrupt:
+        print(
+            f"\nDownload cancelled. Partial files may remain in {folder}.\n"
+            "Run 'bajalo' again with the same URL to resume."
+        )
+        sys.exit(130)
 
 
 def get_url():
@@ -41,7 +39,7 @@ def validate_url(text):
     return is_valid_url(text) or "Enter a full URL starting with http:// or https://"
 
 
-def get_kind():
+def get_media_type():
     return questionary.select(
         "Select:", choices=["video", "only audio"]
     ).ask() or sys.exit(1)
@@ -50,7 +48,7 @@ def get_kind():
 def get_folder():
     choice = questionary.select(
         "Save to:",
-        choices=["Desktop", "Downloads"],
+        choices=FOLDERS,
     ).ask() or sys.exit(1)
     return str(Path.home() / choice)
 
@@ -70,12 +68,8 @@ def get_extension():
 
 
 def get_audio_format():
-    return questionary.select(
+    choice = questionary.select(
         "Select audio format:",
-        choices=[
-            questionary.Choice("auto (keep original quality)", value="best"),
-            "mp3",
-            "m4a",
-            "opus",
-        ],
+        choices=list(AUDIO_FORMATS),
     ).ask() or sys.exit(1)
+    return AUDIO_FORMATS[choice]
