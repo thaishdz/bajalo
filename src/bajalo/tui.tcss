@@ -59,3 +59,23 @@ Screen {
 #progress Bar > .bar--indeterminate {
     color: $primary;
 }
+
+#download_error {
+    display: none;
+    width: 100%;
+    color: $error;
+}
+
+/* When a download fails: red box, no bar, error message instead */
+#progress_box.failed {
+    border: round $error;
+    border-title-color: $error;
+}
+
+#progress_box.failed #progress {
+    display: none;
+}
+
+#progress_box.failed #download_error {
+    display: block;
+}

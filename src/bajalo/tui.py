@@ -5,6 +5,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.validation import Function
 from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, Select
+from yt_dlp.utils import DownloadError, remove_terminal_sequences
 
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
@@ -93,6 +94,7 @@ class BajaloApp(App):
             with Vertical(id="progress_box", classes="group") as group:
                 group.border_title = "Downloading..."
                 yield ProgressBar(id="progress", show_eta=False)
+                yield Label("", id="download_error", markup=False)
         yield Footer()
 
     @on(Input.Changed, "#url")
@@ -115,6 +117,7 @@ class BajaloApp(App):
         self.query_one("#download", Button).disabled = True
         self.query_one("#progress_box").display = True
         self.query_one("#progress_box").border_title = "Downloading..."
+        self.query_one("#progress_box").remove_class("failed")
         self.query_one("#progress", ProgressBar).update(total=None, progress=0)
         media_type = self.query_one("#media_type", Select).value
         folder = str(Path.home() / self.query_one("#folder", Select).value)
@@ -128,10 +131,16 @@ class BajaloApp(App):
 
     @work(thread=True)
     def run_download(self, download, *args):
-        download(*args, progress_hook=self.update_progress, quiet=True)
-        self.call_from_thread(self.notify, "Download finished!")
-        self.call_from_thread(self.enable_download_button)
-        self.call_from_thread(self.set_progress_title, "Done")
+        try:
+            download(*args, progress_hook=self.update_progress, quiet=True)
+            self.call_from_thread(self.notify, "Download finished!")
+            self.call_from_thread(self.set_progress_title, "Done")
+        except DownloadError as error:
+            self.call_from_thread(
+                self.show_download_error, remove_terminal_sequences(error.msg)
+            )
+        finally:
+            self.call_from_thread(self.enable_download_button)
 
     def enable_download_button(self):
         self.query_one("#download", Button).disabled = False
@@ -155,6 +164,11 @@ class BajaloApp(App):
 
     def set_progress_title(self, title):
         self.query_one("#progress_box").border_title = title
+
+    def show_download_error(self, message):
+        self.query_one("#download_error", Label).update(message)
+        self.query_one("#progress_box").add_class("failed")
+        self.set_progress_title("Failed")
 
 
 def main():
