@@ -1,3 +1,4 @@
+import json
 import subprocess
 from pathlib import Path
 from typing import ClassVar
@@ -25,11 +26,12 @@ class BajaloApp(App):
     TITLE = "bajalo"
     CSS_PATH = "tui.tcss"
     BINDINGS: ClassVar = [("escape", "quit", "Quit")]
+    CONFIG_PATH = Path.home() / ".config" / "bajalo" / "config.json"
     download_path = None
 
     def on_mount(self):
         self.register_theme(TERMINAL_THEME)
-        self.theme = "terminal"
+        self.theme = self.load_theme()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -189,6 +191,22 @@ class BajaloApp(App):
     def reveal_download(self):
         # macOS: open Finder with the downloaded file selected
         subprocess.run(["open", "-R", self.download_path], check=False)
+
+    def load_theme(self):
+        if not self.CONFIG_PATH.exists():
+            return "terminal"
+        try:
+            config = json.loads(self.CONFIG_PATH.read_text())
+        except json.JSONDecodeError:
+            return "terminal"
+        theme = config.get("theme", "terminal")
+        if theme in self.available_themes:
+            return theme
+        return "terminal"
+
+    def watch_theme(self, theme):
+        self.CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        self.CONFIG_PATH.write_text(json.dumps({"theme": theme}))
 
 
 def main():

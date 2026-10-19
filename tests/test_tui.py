@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,14 @@ from bajalo.tui import BajaloApp
 
 URL = "https://www.youtube.com/watch?v=YE7VzlLtp-4"
 SAVED_TO = "/Users/me/Desktop/clip [abc].mp4"
+
+
+@pytest.fixture(autouse=True)
+def config_path(tmp_path, monkeypatch):
+    """Keep the saved theme in a temp file so tests never touch the real config."""
+    path = tmp_path / "bajalo" / "config.json"
+    monkeypatch.setattr(BajaloApp, "CONFIG_PATH", path)
+    return path
 
 
 @pytest.fixture
@@ -262,5 +271,54 @@ def test_escape_first_closes_an_open_dropdown():
         await pilot.press("escape")
         await pilot.pause()
         assert app.is_running
+
+    drive(scenario)
+
+
+# --- theme ------------------------------------------------------------------
+
+
+def test_starts_with_the_terminal_theme_when_nothing_is_saved():
+    async def scenario(app, pilot):
+        assert app.theme == "terminal"
+
+    drive(scenario)
+
+
+def test_changing_the_theme_saves_it(config_path):
+    async def scenario(app, pilot):
+        app.theme = "nord"
+        await pilot.pause()
+
+    drive(scenario)
+    assert json.loads(config_path.read_text()) == {"theme": "nord"}
+
+
+def test_starts_with_the_saved_theme(config_path):
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(json.dumps({"theme": "nord"}))
+
+    async def scenario(app, pilot):
+        assert app.theme == "nord"
+
+    drive(scenario)
+
+
+@pytest.mark.parametrize(
+    "saved",
+    [
+        '{"theme": "nord"',  # broken JSON
+        '{"theme": "no-such-theme"}',  # theme that doesn't exist
+        "{}",  # no theme key
+    ],
+)
+def test_falls_back_to_the_terminal_theme_when_the_saved_one_is_unusable(
+    config_path, saved
+):
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(saved)
+
+    async def scenario(app, pilot):
+        assert app.theme == "terminal"
 
     drive(scenario)
