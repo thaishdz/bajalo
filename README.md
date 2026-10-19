@@ -11,7 +11,7 @@ Both work with any site yt-dlp supports (YouTube, Instagram, and many more).
 
 ## Requirements
 
-- Python 3.10 or newer
+- Python 3.11 or newer
 - [ffmpeg](https://ffmpeg.org/), used to merge video and audio and to convert audio (`brew install ffmpeg` on macOS)
 
 ## Install
