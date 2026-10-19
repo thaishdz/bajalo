@@ -190,9 +190,9 @@ def test_missing_total_leaves_the_bar_indeterminate(downloads):
 def test_success_shows_where_the_file_was_saved(downloads):
     async def scenario(app, pilot):
         await download(app, pilot)
-        assert box(app).border_title == "Done"
+        assert box(app).border_title == "Completed"
         assert box(app).has_class("done")
-        assert text(app, "#download_path") == SAVED_TO  # brackets kept, no markup
+        assert text(app, "#download_path") == f"Saved to: {SAVED_TO}"  # brackets kept
         assert not app.query_one("#download").disabled
 
     drive(scenario)
@@ -225,7 +225,7 @@ def test_next_download_clears_the_previous_result(downloads):
         await download(app, pilot)
         assert not box(app).has_class("failed")
         assert box(app).has_class("done")
-        assert box(app).border_title == "Done"
+        assert box(app).border_title == "Completed"
 
     drive(scenario)
 

@@ -2,6 +2,7 @@ import subprocess
 from pathlib import Path
 from typing import ClassVar
 
+from rich.text import Text
 from textual import events, on, work
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -140,7 +141,7 @@ class BajaloApp(App):
     def run_download(self, download, *args):
         try:
             path = download(*args, progress_hook=self.update_progress, quiet=True)
-            self.call_from_thread(self.set_progress_title, "Done")
+            self.call_from_thread(self.set_progress_title, "Completed")
             self.call_from_thread(self.show_download_path, path)
         except DownloadError as error:
             self.call_from_thread(
@@ -179,7 +180,9 @@ class BajaloApp(App):
 
     def show_download_path(self, path):
         self.download_path = path
-        self.query_one("#download_path", Label).update(path)
+        self.query_one("#download_path", Label).update(
+            Text.assemble("Saved to: ", (path, "underline"))
+        )
         self.query_one("#progress_box").add_class("done")
 
     @on(events.Click, "#download_path")

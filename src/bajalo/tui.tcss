@@ -93,5 +93,4 @@ Screen {
 
 #download_path:hover {
     color: $accent;
-    text-style: underline;
 }
