@@ -34,8 +34,6 @@ bjt
 2. Choose **video** or **only audio**, and where to save it.
 3. Pick the options for that type and press **Download**.
 
-The progress box shows the download, then where the file was saved. Click the path to reveal the file in Finder (macOS). If something goes wrong, the box turns red and shows yt-dlp's error.
-
 Quit with `Esc` (or `Ctrl+Q`).
 
 ### CLI
