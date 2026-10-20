@@ -14,6 +14,9 @@ Both work with any site yt-dlp supports (YouTube, Instagram, and many more).
 - Python 3.11 or newer
 - [ffmpeg](https://ffmpeg.org/), used to merge video and audio and to convert audio (`brew install ffmpeg` on macOS)
 
+> [!NOTE]
+> bajalo is developed and tested on **macOS**. It may work on Linux and Windows, but it hasn't been tested there and you may run into errors. Finder features (picking a folder, revealing the downloaded file) are macOS only.
+
 ## Install
 
 With [pipx](https://pipx.pypa.io/), which keeps it in its own environment:
