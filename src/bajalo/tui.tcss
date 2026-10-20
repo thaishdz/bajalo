@@ -39,6 +39,22 @@ Screen {
     color: $error;
 }
 
+/* Path input under "Save to", shown only for "Other..." */
+#custom_folder_box {
+    display: none;
+    height: auto;
+    margin-right: 1;
+}
+
+#custom_folder_box Label {
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#custom_folder_box #custom_folder_error {
+    color: $error;
+}
+
 #download {
     width: 100%;
     margin-bottom: 1;

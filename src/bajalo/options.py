@@ -11,7 +11,7 @@ EXTENSIONS = {
     "webm": "webm",
 }
 
-FOLDERS = ["Desktop", "Downloads"]
+FOLDERS = {"Desktop": "Desktop", "Downloads": "Downloads", "Custom Folder": "other"}
 
 AUDIO_FORMATS = {
     "auto (keep original quality)": "best",

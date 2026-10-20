@@ -105,6 +105,65 @@ def test_invalid_url_does_not_start_a_download(downloads, url):
     audio.assert_not_called()
 
 
+# --- custom folder ----------------------------------------------------------
+
+
+def test_custom_folder_input_shows_only_for_the_custom_choice():
+    async def scenario(app, pilot):
+        assert not app.query_one("#custom_folder_box").display
+        app.query_one("#folder").value = "other"
+        await pilot.pause()
+        assert app.query_one("#custom_folder_box").display
+        app.query_one("#folder").value = "Desktop"
+        await pilot.pause()
+        assert not app.query_one("#custom_folder_box").display
+
+    drive(scenario)
+
+
+def test_typing_a_missing_folder_shows_the_error_below_it(tmp_path):
+    async def scenario(app, pilot):
+        app.query_one("#folder").value = "other"
+        app.query_one("#custom_folder").value = str(tmp_path / "missing")
+        await pilot.pause()
+        assert text(app, "#custom_folder_error") == "Enter a folder that exists"
+        app.query_one("#custom_folder").value = str(tmp_path)
+        await pilot.pause()
+        assert text(app, "#custom_folder_error") == ""
+
+    drive(scenario)
+
+
+def test_download_goes_to_the_custom_folder(downloads, tmp_path, monkeypatch):
+    video, _ = downloads
+    monkeypatch.setenv("HOME", str(tmp_path))  # so "~" points into tmp_path
+    (tmp_path / "clips").mkdir()
+
+    async def scenario(app, pilot):
+        app.query_one("#folder").value = "other"
+        app.query_one("#custom_folder").value = "  ~/clips  "
+        await download(app, pilot)
+
+    drive(scenario)
+    assert video.call_args.args[1] == str(tmp_path / "clips")
+
+
+@pytest.mark.parametrize("folder", ["", "/no/such/folder"])
+def test_missing_custom_folder_does_not_start_a_download(downloads, folder):
+    video, audio = downloads
+
+    async def scenario(app, pilot):
+        app.query_one("#folder").value = "other"
+        app.query_one("#custom_folder").value = folder
+        await download(app, pilot)
+        assert not box(app).display
+        assert not app.query_one("#download").disabled
+
+    drive(scenario)
+    video.assert_not_called()
+    audio.assert_not_called()
+
+
 # --- calling the downloader -------------------------------------------------
 
 
@@ -294,6 +353,21 @@ def test_changing_the_theme_saves_it(config_path):
     assert json.loads(config_path.read_text()) == {"theme": "nord"}
 
 
+def test_changing_the_theme_keeps_the_other_saved_settings(config_path):
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(json.dumps({"folder": "/Users/me/Movies"}))
+
+    async def scenario(app, pilot):
+        app.theme = "nord"
+        await pilot.pause()
+
+    drive(scenario)
+    assert json.loads(config_path.read_text()) == {
+        "folder": "/Users/me/Movies",
+        "theme": "nord",
+    }
+
+
 def test_starts_with_the_saved_theme(config_path):
     config_path.parent.mkdir(parents=True)
     config_path.write_text(json.dumps({"theme": "nord"}))
@@ -320,5 +394,71 @@ def test_falls_back_to_the_terminal_theme_when_the_saved_one_is_unusable(
 
     async def scenario(app, pilot):
         assert app.theme == "terminal"
+
+    drive(scenario)
+
+
+# --- saved folder -----------------------------------------------------------
+
+
+def save_folder(config_path, folder):
+    """Pretend a previous run saved this folder."""
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(json.dumps({"folder": folder}))
+
+
+def test_download_saves_the_folder(downloads, config_path):
+    async def scenario(app, pilot):
+        app.query_one("#folder").value = "Downloads"
+        await download(app, pilot)
+
+    drive(scenario)
+    saved = json.loads(config_path.read_text())
+    assert saved["folder"] == str(Path.home() / "Downloads")
+
+
+def test_invalid_folder_is_not_saved(downloads, config_path):
+    async def scenario(app, pilot):
+        app.query_one("#folder").value = "other"
+        app.query_one("#custom_folder").value = "/no/such/folder"
+        await download(app, pilot)
+
+    drive(scenario)
+    assert "folder" not in json.loads(config_path.read_text())
+
+
+@pytest.mark.parametrize("name", ["Desktop", "Downloads"])
+def test_starts_with_the_saved_preset_folder(config_path, name):
+    save_folder(config_path, str(Path.home() / name))
+
+    async def scenario(app, pilot):
+        await pilot.pause()
+        assert app.query_one("#folder").value == name
+        assert not app.query_one("#custom_folder_box").display
+
+    drive(scenario)
+
+
+def test_starts_with_the_saved_custom_folder(config_path, tmp_path):
+    save_folder(config_path, str(tmp_path))
+
+    async def scenario(app, pilot):
+        await pilot.pause()
+        assert app.query_one("#folder").value == "other"
+        assert app.query_one("#custom_folder").value == str(tmp_path)
+        assert app.query_one("#custom_folder_box").display
+        assert text(app, "#custom_folder_error") == ""
+
+    drive(scenario)
+
+
+def test_saved_folder_that_no_longer_exists_shows_the_error(config_path):
+    save_folder(config_path, "/no/such/folder")
+
+    async def scenario(app, pilot):
+        await pilot.pause()
+        assert app.query_one("#folder").value == "other"
+        assert app.query_one("#custom_folder").value == "/no/such/folder"
+        assert text(app, "#custom_folder_error") == "Enter a folder that exists"
 
     drive(scenario)

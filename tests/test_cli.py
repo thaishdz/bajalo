@@ -1,12 +1,15 @@
 from pathlib import Path
+from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bajalo.cli import get_audio_format, main
-from bajalo.options import FORMATS
+from bajalo.cli import get_audio_format, get_folder, main, validate_folder
+from bajalo.options import FOLDERS, FORMATS
 
 URL = "https://www.youtube.com/watch?v=YE7VzlLtp-4"
+# The label of the custom-folder choice, whatever its text
+CUSTOM = next(label for label, value in FOLDERS.items() if value == "other")
 
 
 def answers(*values):
@@ -29,6 +32,57 @@ def answers(*values):
 def test_audio_format_returns_the_codec_not_the_label(label, expected):
     with patch("bajalo.cli.questionary.select", side_effect=answers(label)):
         assert get_audio_format() == expected
+
+
+# --- get_folder -------------------------------------------------------------
+
+
+def finder(returncode, stdout=""):
+    """Fake osascript run: Finder's folder picker returning `stdout`."""
+    return CompletedProcess(args=[], returncode=returncode, stdout=stdout)
+
+
+def test_get_folder_returns_the_preset_folder_in_home():
+    with patch("bajalo.cli.questionary.select", side_effect=answers("Downloads")):
+        assert get_folder() == str(Path.home() / "Downloads")
+
+
+def test_other_opens_finder_on_macos(monkeypatch):
+    monkeypatch.setattr("bajalo.cli.sys.platform", "darwin")
+    with (
+        patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
+        patch(
+            "bajalo.cli.subprocess.run", return_value=finder(0, "/Users/me/clips/\n")
+        ),
+    ):
+        assert get_folder() == "/Users/me/clips"
+
+
+def test_cancelling_finder_exits(monkeypatch):
+    monkeypatch.setattr("bajalo.cli.sys.platform", "darwin")
+    with (
+        patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
+        patch("bajalo.cli.subprocess.run", return_value=finder(1)),
+        pytest.raises(SystemExit),
+    ):
+        get_folder()
+
+
+def test_other_asks_for_a_path_outside_macos(monkeypatch):
+    monkeypatch.setattr("bajalo.cli.sys.platform", "linux")
+    with (
+        patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
+        patch("bajalo.cli.questionary.path", side_effect=answers("~/clips")) as path,
+        patch("bajalo.cli.subprocess.run") as run,
+    ):
+        assert get_folder() == str(Path.home() / "clips")
+    assert path.call_args.kwargs["validate"] is validate_folder
+    run.assert_not_called()
+
+
+def test_validate_folder_explains_what_is_wrong(tmp_path):
+    assert validate_folder(str(tmp_path)) is True
+    assert validate_folder(str(tmp_path / "missing")) == "Enter a folder that exists"
 
 
 # --- main -------------------------------------------------------------------

@@ -14,7 +14,7 @@ from yt_dlp.utils import DownloadError, remove_terminal_sequences
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
 from bajalo.theme import TERMINAL_THEME
-from bajalo.utils import is_valid_url
+from bajalo.utils import is_existing_folder, is_valid_url
 
 
 def field(label, widget):
@@ -31,7 +31,7 @@ class BajaloApp(App):
 
     def on_mount(self):
         self.register_theme(TERMINAL_THEME)
-        self.theme = self.load_theme()
+        self.restore_settings()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -49,23 +49,38 @@ class BajaloApp(App):
                     ],
                 )
                 yield Label("", id="url_error")
-            with Horizontal(classes="group row") as group:
+            with Vertical(classes="group") as group:
                 group.border_title = "Output"
-                yield field(
-                    "Type",
-                    Select(
-                        [("video", "video"), ("only audio", "audio")],
-                        id="media_type",
-                        allow_blank=False,
-                        value="video",
-                    ),
-                )
-                yield field(
-                    "Save to",
-                    Select.from_values(
-                        FOLDERS, id="folder", allow_blank=False, value="Desktop"
-                    ),
-                )
+                with Horizontal(classes="row"):
+                    yield field(
+                        "Type",
+                        Select(
+                            [("video", "video"), ("only audio", "audio")],
+                            id="media_type",
+                            allow_blank=False,
+                            value="video",
+                        ),
+                    )
+                    yield field(
+                        "Save to",
+                        Select(
+                            FOLDERS.items(),
+                            id="folder",
+                            allow_blank=False,
+                            value=FOLDERS["Desktop"],
+                        ),
+                    )
+                # Shown only when the custom folder is chosen in "Save to"
+                with Vertical(id="custom_folder_box"):
+                    yield Label("Enter a new folder destination:")
+                    yield Input(
+                        placeholder="Folder path, e.g. ~/Movies",
+                        id="custom_folder",
+                        validators=[
+                            Function(is_existing_folder, "Enter a folder that exists")
+                        ],
+                    )
+                    yield Label("", id="custom_folder_error")
             with Horizontal(id="video_options", classes="group row") as group:
                 group.border_title = "Video options"
                 yield field(
@@ -116,6 +131,25 @@ class BajaloApp(App):
         self.query_one("#video_options").display = is_video
         self.query_one("#audio_options").display = not is_video
 
+    @on(Select.Changed, "#folder")
+    def toggle_custom_folder(self, event):
+        is_other = event.value == "other"
+        self.query_one("#custom_folder_box").display = is_other
+
+    @on(Input.Changed, "#custom_folder")
+    def show_folder_error(self, event):
+        errors = event.validation_result.failure_descriptions
+        self.query_one("#custom_folder_error", Label).update("\n".join(errors))
+
+    def selected_folder(self):
+        choice = self.query_one("#folder", Select).value
+        if choice != "other":
+            return str(Path.home() / choice)  # ~/Desktop or ~/Downloads
+        folder_path = self.query_one("#custom_folder", Input).value
+        if not is_existing_folder(folder_path):
+            return None
+        return str(Path(folder_path.strip()).expanduser())
+
     @on(Button.Pressed, "#download")
     def start_download(self):
         url = self.query_one("#url", Input).value.strip()
@@ -123,7 +157,12 @@ class BajaloApp(App):
             self.notify("Enter a valid URL", severity="error")
             return
 
-        folder = str(Path.home() / self.query_one("#folder", Select).value)
+        folder_path = self.selected_folder()
+        if folder_path is None:
+            self.notify("Enter a folder that exists", severity="error")
+            return
+        self.write_config("folder", folder_path)
+
         self.query_one("#download", Button).disabled = True
         self.query_one("#progress_box").display = True
         self.query_one("#progress_box").border_title = "Downloading..."
@@ -134,10 +173,10 @@ class BajaloApp(App):
         if media_type == "video":
             quality = self.query_one("#quality", Select).value
             extension = self.query_one("#extension", Select).value
-            self.run_download(download_video, url, folder, quality, extension)
+            self.run_download(download_video, url, folder_path, quality, extension)
         else:
             audio_format = self.query_one("#audio_format", Select).value
-            self.run_download(download_audio, url, folder, audio_format)
+            self.run_download(download_audio, url, folder_path, audio_format)
 
     @work(thread=True)
     def run_download(self, download, *args):
@@ -193,20 +232,48 @@ class BajaloApp(App):
         subprocess.run(["open", "-R", self.download_path], check=False)
 
     def load_theme(self):
-        if not self.CONFIG_PATH.exists():
-            return "terminal"
-        try:
-            config = json.loads(self.CONFIG_PATH.read_text())
-        except json.JSONDecodeError:
-            return "terminal"
-        theme = config.get("theme", "terminal")
+        config_dict = self.read_config()
+        theme = config_dict.get("theme", "terminal")
         if theme in self.available_themes:
             return theme
         return "terminal"
 
+    def load_folder(self):
+        config_dict = self.read_config()
+        folder = config_dict.get("folder", None)
+        return folder
+
+    def read_config(self):
+        if not self.CONFIG_PATH.exists():
+            return {}
+        try:
+            config = json.loads(self.CONFIG_PATH.read_text())
+        except json.JSONDecodeError:
+            return {}
+        return config
+
     def watch_theme(self, theme):
+        self.write_config("theme", theme)
+
+    def write_config(self, key, value):
+        config = self.read_config()
+        config[key] = value
         self.CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        self.CONFIG_PATH.write_text(json.dumps({"theme": theme}))
+        self.CONFIG_PATH.write_text(json.dumps(config))
+
+    def restore_settings(self):
+        self.theme = self.load_theme()
+        folder = self.load_folder()
+
+        if folder is None:
+            return
+        for value in FOLDERS.values():
+            path = str(Path.home() / value)
+            if path == folder:
+                self.query_one("#folder", Select).value = value
+                return
+        self.query_one("#folder", Select).value = "other"
+        self.query_one("#custom_folder", Input).value = folder
 
 
 def main():
