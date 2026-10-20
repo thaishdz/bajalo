@@ -55,6 +55,18 @@ Screen {
     color: $error;
 }
 
+#custom_folder_row {
+    height: auto;
+}
+
+#custom_folder {
+    width: 1fr;
+}
+
+#browse {
+    margin-left: 1;
+}
+
 #download {
     width: 100%;
     margin-bottom: 1;

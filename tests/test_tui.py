@@ -164,6 +164,52 @@ def test_missing_custom_folder_does_not_start_a_download(downloads, folder):
     audio.assert_not_called()
 
 
+@pytest.mark.parametrize("platform, shown", [("darwin", True), ("linux", False)])
+def test_browse_button_only_exists_on_macos(monkeypatch, platform, shown):
+    monkeypatch.setattr("bajalo.tui.sys.platform", platform)
+
+    async def scenario(app, pilot):
+        assert bool(app.query("#browse")) is shown
+
+    drive(scenario)
+
+
+async def browse(app, pilot):
+    """Choose the custom folder, press Browse... and wait for Finder to answer."""
+    app.query_one("#folder").value = "other"
+    await pilot.pause()
+    app.query_one("#browse").press()
+    await pilot.pause()
+    await app.workers.wait_for_complete()
+    await pilot.pause()
+
+
+def test_browse_fills_in_the_folder_chosen_in_finder(monkeypatch, tmp_path):
+    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+
+    async def scenario(app, pilot):
+        with patch("bajalo.tui.choose_folder_in_finder", return_value=str(tmp_path)):
+            await browse(app, pilot)
+        assert app.query_one("#custom_folder").value == str(tmp_path)
+        assert text(app, "#custom_folder_error") == ""
+        assert not app.query_one("#browse").disabled
+
+    drive(scenario)
+
+
+def test_cancelling_finder_keeps_the_typed_folder(monkeypatch):
+    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+
+    async def scenario(app, pilot):
+        app.query_one("#custom_folder").value = "~/clips"
+        with patch("bajalo.tui.choose_folder_in_finder", return_value=None):
+            await browse(app, pilot)
+        assert app.query_one("#custom_folder").value == "~/clips"
+        assert not app.query_one("#browse").disabled
+
+    drive(scenario)
+
+
 # --- calling the downloader -------------------------------------------------
 
 

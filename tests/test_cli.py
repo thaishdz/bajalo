@@ -52,7 +52,7 @@ def test_other_opens_finder_on_macos(monkeypatch):
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
         patch(
-            "bajalo.cli.subprocess.run", return_value=finder(0, "/Users/me/clips/\n")
+            "bajalo.utils.subprocess.run", return_value=finder(0, "/Users/me/clips/\n")
         ),
     ):
         assert get_folder() == "/Users/me/clips"
@@ -62,7 +62,7 @@ def test_cancelling_finder_exits(monkeypatch):
     monkeypatch.setattr("bajalo.cli.sys.platform", "darwin")
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
-        patch("bajalo.cli.subprocess.run", return_value=finder(1)),
+        patch("bajalo.utils.subprocess.run", return_value=finder(1)),
         pytest.raises(SystemExit),
     ):
         get_folder()
@@ -73,7 +73,7 @@ def test_other_asks_for_a_path_outside_macos(monkeypatch):
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
         patch("bajalo.cli.questionary.path", side_effect=answers("~/clips")) as path,
-        patch("bajalo.cli.subprocess.run") as run,
+        patch("bajalo.utils.subprocess.run") as run,
     ):
         assert get_folder() == str(Path.home() / "clips")
     assert path.call_args.kwargs["validate"] is validate_folder

@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import ClassVar
 
@@ -14,7 +15,7 @@ from yt_dlp.utils import DownloadError, remove_terminal_sequences
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
 from bajalo.theme import TERMINAL_THEME
-from bajalo.utils import is_existing_folder, is_valid_url
+from bajalo.utils import choose_folder_in_finder, is_existing_folder, is_valid_url
 
 
 def field(label, widget):
@@ -73,13 +74,19 @@ class BajaloApp(App):
                 # Shown only when the custom folder is chosen in "Save to"
                 with Vertical(id="custom_folder_box"):
                     yield Label("Enter a new folder destination:")
-                    yield Input(
-                        placeholder="Folder path, e.g. ~/Movies",
-                        id="custom_folder",
-                        validators=[
-                            Function(is_existing_folder, "Enter a folder that exists")
-                        ],
-                    )
+                    with Horizontal(id="custom_folder_row"):
+                        yield Input(
+                            placeholder="Folder path, e.g. ~/Movies",
+                            id="custom_folder",
+                            validators=[
+                                Function(
+                                    is_existing_folder, "Enter a folder that exists"
+                                )
+                            ],
+                        )
+                        # Finder's folder picker only exists on macOS
+                        if sys.platform == "darwin":
+                            yield Button("Browse...", id="browse")
                     yield Label("", id="custom_folder_error")
             with Horizontal(id="video_options", classes="group row") as group:
                 group.border_title = "Video options"
@@ -135,6 +142,27 @@ class BajaloApp(App):
     def toggle_custom_folder(self, event):
         is_other = event.value == "other"
         self.query_one("#custom_folder_box").display = is_other
+
+    @on(Button.Pressed, "#browse")
+    def browse_folder(self):
+        self.query_one("#browse", Button).disabled = True  # one Finder at a time
+        self.pick_folder_in_finder()
+
+    @work(thread=True)
+    def pick_folder_in_finder(self):
+        # osascript waits until a folder is chosen, so it runs off the UI thread
+        try:
+            folder = choose_folder_in_finder()
+            if folder is not None:
+                self.call_from_thread(self.set_custom_folder, folder)
+        finally:
+            self.call_from_thread(self.enable_browse_button)
+
+    def set_custom_folder(self, folder):
+        self.query_one("#custom_folder", Input).value = folder
+
+    def enable_browse_button(self):
+        self.query_one("#browse", Button).disabled = False
 
     @on(Input.Changed, "#custom_folder")
     def show_folder_error(self, event):

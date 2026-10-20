@@ -1,4 +1,3 @@
-import subprocess
 import sys
 from pathlib import Path
 
@@ -7,7 +6,7 @@ from yt_dlp.utils import DownloadError
 
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
-from bajalo.utils import is_existing_folder, is_valid_url
+from bajalo.utils import choose_folder_in_finder, is_existing_folder, is_valid_url
 
 
 def main():
@@ -58,24 +57,11 @@ def get_folder():
 
 def choose_folder():
     if sys.platform == "darwin":
-        return choose_folder_in_finder()
+        return choose_folder_in_finder() or sys.exit(1)
     folder_path = questionary.path(
         "Choose a new folder:", validate=validate_folder, only_directories=True
     ).ask() or sys.exit(1)
     return str(Path(folder_path.strip()).expanduser())
-
-
-def choose_folder_in_finder():
-    # macOS: open Finder's folder picker
-    result = subprocess.run(
-        ["osascript", "-e", 'POSIX path of (choose folder with prompt "Save to:")'],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        sys.exit(1)
-    return str(Path(result.stdout.strip()))
 
 
 def validate_folder(folder_path):
