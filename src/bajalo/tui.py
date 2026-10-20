@@ -73,10 +73,14 @@ class BajaloApp(App):
                     )
                 # Shown only when the custom folder is chosen in "Save to"
                 with Vertical(id="custom_folder_box"):
-                    yield Label("Enter a new folder destination:")
+                    yield Label("Folder:")
                     with Horizontal(id="custom_folder_row"):
                         yield Input(
-                            placeholder="Folder path, e.g. ~/Movies",
+                            placeholder=(
+                                "Type a path or click Browse..."
+                                if sys.platform == "darwin"
+                                else "Type a path, e.g. ~/Movies"
+                            ),
                             id="custom_folder",
                             validators=[
                                 Function(
