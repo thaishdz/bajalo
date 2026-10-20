@@ -249,13 +249,19 @@ class BajaloApp(App):
 
     def show_download_path(self, path):
         self.download_path = path
-        self.query_one("#download_path", Label).update(
-            Text.assemble("Saved to: ", (path, "underline"))
+        label = self.query_one("#download_path", Label)
+        # Only macOS can reveal the file, so only there it looks like a link
+        is_link = sys.platform == "darwin"
+        label.update(
+            Text.assemble("Saved to: ", (path, "underline" if is_link else ""))
         )
+        label.set_class(is_link, "link")
         self.query_one("#progress_box").add_class("done")
 
     @on(events.Click, "#download_path")
     def reveal_download(self):
+        if sys.platform != "darwin":  # `open` doesn't exist elsewhere
+            return
         # macOS: open Finder with the downloaded file selected
         subprocess.run(["open", "-R", self.download_path], check=False)
 

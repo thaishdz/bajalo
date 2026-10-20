@@ -344,13 +344,31 @@ def test_next_download_clears_the_previous_result(downloads):
     drive(scenario)
 
 
-def test_clicking_the_saved_path_reveals_it_in_finder(downloads):
+def test_clicking_the_saved_path_reveals_it_in_finder(downloads, monkeypatch):
+    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+
     async def scenario(app, pilot):
         await download(app, pilot)
+        assert app.query_one("#download_path").has_class("link")
         with patch("bajalo.tui.subprocess.run") as run:
             await pilot.click("#download_path")
             await pilot.pause()
         run.assert_called_once_with(["open", "-R", SAVED_TO], check=False)
+
+    drive(scenario)
+
+
+def test_saved_path_is_plain_text_outside_macos(downloads, monkeypatch):
+    monkeypatch.setattr("bajalo.tui.sys.platform", "linux")
+
+    async def scenario(app, pilot):
+        await download(app, pilot)
+        assert text(app, "#download_path") == f"Saved to: {SAVED_TO}"
+        assert not app.query_one("#download_path").has_class("link")
+        with patch("bajalo.tui.subprocess.run") as run:
+            await pilot.click("#download_path")
+            await pilot.pause()
+        run.assert_not_called()
 
     drive(scenario)
 

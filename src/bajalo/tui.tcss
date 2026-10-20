@@ -119,6 +119,6 @@ Screen {
     display: block;
 }
 
-#download_path:hover {
+#download_path.link:hover {
     color: $accent;
 }
