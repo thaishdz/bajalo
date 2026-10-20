@@ -25,6 +25,12 @@ With [pipx](https://pipx.pypa.io/), which keeps it in its own environment:
 pipx install git+https://github.com/thaishdz/bajalo.git
 ```
 
+To update to the latest version:
+
+```bash
+pipx upgrade bajalo
+```
+
 ## Usage
 
 ### TUI
