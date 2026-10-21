@@ -164,9 +164,9 @@ def test_missing_custom_folder_does_not_start_a_download(downloads, folder):
     audio.assert_not_called()
 
 
-@pytest.mark.parametrize("platform, shown", [("darwin", True), ("linux", False)])
-def test_browse_button_only_exists_on_macos(monkeypatch, platform, shown):
-    monkeypatch.setattr("bajalo.tui.sys.platform", platform)
+@pytest.mark.parametrize("command, shown", [(["picker"], True), (None, False)])
+def test_browse_button_only_exists_with_a_folder_picker(monkeypatch, command, shown):
+    monkeypatch.setattr("bajalo.tui.folder_picker_command", lambda: command)
 
     async def scenario(app, pilot):
         assert bool(app.query("#browse")) is shown
@@ -175,7 +175,7 @@ def test_browse_button_only_exists_on_macos(monkeypatch, platform, shown):
 
 
 async def browse(app, pilot):
-    """Choose the custom folder, press Browse... and wait for Finder to answer."""
+    """Choose the custom folder, press Browse... and wait for the picker to answer."""
     app.query_one("#folder").value = "other"
     await pilot.pause()
     app.query_one("#browse").press()
@@ -184,11 +184,11 @@ async def browse(app, pilot):
     await pilot.pause()
 
 
-def test_browse_fills_in_the_folder_chosen_in_finder(monkeypatch, tmp_path):
-    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+def test_browse_fills_in_the_folder_chosen_in_the_picker(monkeypatch, tmp_path):
+    monkeypatch.setattr("sys.platform", "darwin")
 
     async def scenario(app, pilot):
-        with patch("bajalo.tui.choose_folder_in_finder", return_value=str(tmp_path)):
+        with patch("bajalo.tui.pick_folder", return_value=str(tmp_path)):
             await browse(app, pilot)
         assert app.query_one("#custom_folder").value == str(tmp_path)
         assert text(app, "#custom_folder_error") == ""
@@ -197,12 +197,12 @@ def test_browse_fills_in_the_folder_chosen_in_finder(monkeypatch, tmp_path):
     drive(scenario)
 
 
-def test_cancelling_finder_keeps_the_typed_folder(monkeypatch):
-    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+def test_cancelling_the_picker_keeps_the_typed_folder(monkeypatch):
+    monkeypatch.setattr("sys.platform", "darwin")
 
     async def scenario(app, pilot):
         app.query_one("#custom_folder").value = "~/clips"
-        with patch("bajalo.tui.choose_folder_in_finder", return_value=None):
+        with patch("bajalo.tui.pick_folder", return_value=None):
             await browse(app, pilot)
         assert app.query_one("#custom_folder").value == "~/clips"
         assert not app.query_one("#browse").disabled
@@ -345,30 +345,34 @@ def test_next_download_clears_the_previous_result(downloads):
 
 
 def test_clicking_the_saved_path_reveals_it_in_finder(downloads, monkeypatch):
-    monkeypatch.setattr("bajalo.tui.sys.platform", "darwin")
+    monkeypatch.setattr("sys.platform", "darwin")
 
     async def scenario(app, pilot):
         await download(app, pilot)
         assert app.query_one("#download_path").has_class("link")
-        with patch("bajalo.tui.subprocess.run") as run:
+        with patch("bajalo.utils.subprocess.Popen") as popen:
             await pilot.click("#download_path")
             await pilot.pause()
-        run.assert_called_once_with(["open", "-R", SAVED_TO], check=False)
+            await app.workers.wait_for_complete()
+        assert popen.call_args.args[0] == ["open", "-R", SAVED_TO]
 
     drive(scenario)
 
 
-def test_saved_path_is_plain_text_outside_macos(downloads, monkeypatch):
-    monkeypatch.setattr("bajalo.tui.sys.platform", "linux")
+def test_saved_path_is_plain_text_without_a_file_manager(downloads, monkeypatch):
+    monkeypatch.setattr("sys.platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
 
     async def scenario(app, pilot):
         await download(app, pilot)
         assert text(app, "#download_path") == f"Saved to: {SAVED_TO}"
         assert not app.query_one("#download_path").has_class("link")
-        with patch("bajalo.tui.subprocess.run") as run:
+        with patch("bajalo.utils.subprocess.Popen") as popen:
             await pilot.click("#download_path")
             await pilot.pause()
-        run.assert_not_called()
+            await app.workers.wait_for_complete()
+        popen.assert_not_called()
 
     drive(scenario)
 

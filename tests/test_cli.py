@@ -48,7 +48,7 @@ def test_get_folder_returns_the_preset_folder_in_home():
 
 
 def test_other_opens_finder_on_macos(monkeypatch):
-    monkeypatch.setattr("bajalo.cli.sys.platform", "darwin")
+    monkeypatch.setattr("sys.platform", "darwin")
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
         patch(
@@ -59,7 +59,7 @@ def test_other_opens_finder_on_macos(monkeypatch):
 
 
 def test_cancelling_finder_exits(monkeypatch):
-    monkeypatch.setattr("bajalo.cli.sys.platform", "darwin")
+    monkeypatch.setattr("sys.platform", "darwin")
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
         patch("bajalo.utils.subprocess.run", return_value=finder(1)),
@@ -68,8 +68,10 @@ def test_cancelling_finder_exits(monkeypatch):
         get_folder()
 
 
-def test_other_asks_for_a_path_outside_macos(monkeypatch):
-    monkeypatch.setattr("bajalo.cli.sys.platform", "linux")
+def test_other_asks_for_a_path_without_a_folder_picker(monkeypatch):
+    monkeypatch.setattr("sys.platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     with (
         patch("bajalo.cli.questionary.select", side_effect=answers(CUSTOM)),
         patch("bajalo.cli.questionary.path", side_effect=answers("~/clips")) as path,
