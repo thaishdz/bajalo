@@ -6,7 +6,12 @@ from yt_dlp.utils import DownloadError
 
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
-from bajalo.utils import choose_folder_in_finder, is_existing_folder, is_valid_url
+from bajalo.utils import (
+    folder_picker_command,
+    is_existing_folder,
+    is_valid_url,
+    pick_folder,
+)
 
 
 def main():
@@ -56,8 +61,8 @@ def get_folder():
 
 
 def choose_folder():
-    if sys.platform == "darwin":
-        return choose_folder_in_finder() or sys.exit(1)
+    if folder_picker_command() is not None:
+        return pick_folder() or sys.exit(1)
     folder_path = questionary.path(
         "Choose a new folder:", validate=validate_folder, only_directories=True
     ).ask() or sys.exit(1)

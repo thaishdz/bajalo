@@ -1,6 +1,4 @@
 import json
-import subprocess
-import sys
 from pathlib import Path
 from typing import ClassVar
 
@@ -15,7 +13,14 @@ from yt_dlp.utils import DownloadError, remove_terminal_sequences
 from bajalo.downloader import download_audio, download_video
 from bajalo.options import AUDIO_FORMATS, EXTENSIONS, FOLDERS, FORMATS
 from bajalo.theme import TERMINAL_THEME
-from bajalo.utils import choose_folder_in_finder, is_existing_folder, is_valid_url
+from bajalo.utils import (
+    folder_picker_command,
+    is_existing_folder,
+    is_valid_url,
+    pick_folder,
+    reveal_command,
+    reveal_file,
+)
 
 
 def field(label, widget):
@@ -73,12 +78,13 @@ class BajaloApp(App):
                     )
                 # Shown only when the custom folder is chosen in "Save to"
                 with Vertical(id="custom_folder_box"):
+                    has_picker = folder_picker_command() is not None
                     yield Label("Folder:")
                     with Horizontal(id="custom_folder_row"):
                         yield Input(
                             placeholder=(
                                 "Type a path or click Browse..."
-                                if sys.platform == "darwin"
+                                if has_picker
                                 else "Type a path, e.g. ~/Movies"
                             ),
                             id="custom_folder",
@@ -88,8 +94,7 @@ class BajaloApp(App):
                                 )
                             ],
                         )
-                        # Finder's folder picker only exists on macOS
-                        if sys.platform == "darwin":
+                        if has_picker:
                             yield Button("Browse...", id="browse")
                     yield Label("", id="custom_folder_error")
             with Horizontal(id="video_options", classes="group row") as group:
@@ -149,14 +154,14 @@ class BajaloApp(App):
 
     @on(Button.Pressed, "#browse")
     def browse_folder(self):
-        self.query_one("#browse", Button).disabled = True  # one Finder at a time
-        self.pick_folder_in_finder()
+        self.query_one("#browse", Button).disabled = True  # one picker at a time
+        self.run_folder_picker()
 
     @work(thread=True)
-    def pick_folder_in_finder(self):
-        # osascript waits until a folder is chosen, so it runs off the UI thread
+    def run_folder_picker(self):
+        # The picker waits until a folder is chosen, so it runs off the UI thread
         try:
-            folder = choose_folder_in_finder()
+            folder = pick_folder()
             if folder is not None:
                 self.call_from_thread(self.set_custom_folder, folder)
         finally:
@@ -254,8 +259,8 @@ class BajaloApp(App):
     def show_download_path(self, path):
         self.download_path = path
         label = self.query_one("#download_path", Label)
-        # Only macOS can reveal the file, so only there it looks like a link
-        is_link = sys.platform == "darwin"
+        # Only looks like a link where clicking it can open the file manager
+        is_link = reveal_command(path) is not None
         label.update(
             Text.assemble("Saved to: ", (path, "underline" if is_link else ""))
         )
@@ -264,10 +269,12 @@ class BajaloApp(App):
 
     @on(events.Click, "#download_path")
     def reveal_download(self):
-        if sys.platform != "darwin":  # `open` doesn't exist elsewhere
-            return
-        # macOS: open Finder with the downloaded file selected
-        subprocess.run(["open", "-R", self.download_path], check=False)
+        self.run_reveal_file(self.download_path)
+
+    @work(thread=True)
+    def run_reveal_file(self, path):
+        # On Linux it waits for the file manager to answer over D-Bus
+        reveal_file(path)
 
     def load_theme(self):
         config_dict = self.read_config()
